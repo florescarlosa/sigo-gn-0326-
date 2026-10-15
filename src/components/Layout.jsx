@@ -6,6 +6,7 @@ function Layout() {
       <header className="header">
         <h1>SIGO-GN</h1>
         <p>Sistemas Operativos — Gestión de acceso</p>
+        <p>Boleta: 2026600326</p>
       </header>
 
       <main className="main-content">
