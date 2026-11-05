@@ -1,8 +1,10 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import RutaProtegida from "./components/RutaProtegida";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Expedientes from "./pages/Expedientes";
 import "./App.css";
 
 function App() {
@@ -16,6 +18,11 @@ function App() {
             <Route
               path="/dashboard"
               element={<Dashboard />}
+            />
+
+            <Route
+              path="/expedientes"
+              element={<Expedientes />}
             />
           </Route>
         </Route>
