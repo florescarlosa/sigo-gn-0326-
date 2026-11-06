@@ -12,18 +12,36 @@ function Expedientes() {
         tipoIncidente: '',
         zona: '',
         fecha: '',
-        descripcion: ''
+        descripcion: '',
+        estatus: '',
+        prioridad: ''
     });
 
     const [mensaje, setMensaje] = useState('');
     const [editando, setEditando] = useState(false);
+    const [textoBusqueda, setTextoBusqueda] = useState('');
 
-    // Consultar todos los expedientes
-    const cargarExpedientes = async () => {
+    // Estados para los filtros
+    const [filtroEstatus, setFiltroEstatus] = useState('');
+    const [filtroPrioridad, setFiltroPrioridad] = useState('');
+
+    // Estados para el ordenamiento
+    const [columnaOrden, setColumnaOrden] = useState('');
+    const [direccionOrden, setDireccionOrden] = useState('asc');
+
+    // Estado para la paginación
+    const [paginaActual, setPaginaActual] = useState(1);
+
+    const expedientesPorPagina = 10;
+
+    // Consultar expedientes o realizar una búsqueda
+    async function cargarExpedientes(texto = '') {
         try {
-            const respuesta = await fetch(
-                'http://localhost:4000/expedientes'
-            );
+            const url = texto.trim()
+                ? `http://localhost:4000/expedientes/buscar?texto=${encodeURIComponent(texto)}`
+                : 'http://localhost:4000/expedientes';
+
+            const respuesta = await fetch(url);
 
             if (!respuesta.ok) {
                 throw new Error('No se pudieron consultar los expedientes');
@@ -41,11 +59,26 @@ function Expedientes() {
         } finally {
             setCargando(false);
         }
-    };
+    }
 
+    // Cargar expedientes al entrar al módulo
     useEffect(() => {
         cargarExpedientes();
     }, []);
+
+    // Buscar mientras el usuario escribe
+    useEffect(() => {
+        const temporizador = setTimeout(() => {
+            cargarExpedientes(textoBusqueda);
+        }, 400);
+
+        return () => clearTimeout(temporizador);
+    }, [textoBusqueda]);
+
+    // Reiniciar la página cuando cambien los filtros o la búsqueda
+    useEffect(() => {
+        setPaginaActual(1);
+    }, [textoBusqueda, filtroEstatus, filtroPrioridad]);
 
     // Detectar cambios en los campos
     function manejarCambio(e) {
@@ -57,6 +90,20 @@ function Expedientes() {
         });
     }
 
+    // Ordenar expedientes al pulsar un encabezado
+    function manejarOrdenamiento(columna) {
+        if (columnaOrden === columna) {
+            setDireccionOrden(
+                direccionOrden === 'asc' ? 'desc' : 'asc'
+            );
+        } else {
+            setColumnaOrden(columna);
+            setDireccionOrden('asc');
+        }
+
+        setPaginaActual(1);
+    }
+
     // Cargar expediente para editar
     function editarExpediente(expediente) {
         setFormulario({
@@ -65,7 +112,9 @@ function Expedientes() {
             tipoIncidente: expediente.tipoIncidente,
             zona: expediente.zona,
             fecha: expediente.fecha,
-            descripcion: expediente.descripcion
+            descripcion: expediente.descripcion,
+            estatus: expediente.estatus,
+            prioridad: expediente.prioridad
         });
 
         setEditando(true);
@@ -108,7 +157,8 @@ function Expedientes() {
             );
 
             limpiarFormulario();
-            await cargarExpedientes();
+            setPaginaActual(1);
+            await cargarExpedientes(textoBusqueda);
 
         } catch (error) {
             setMensaje(error.message);
@@ -141,7 +191,7 @@ function Expedientes() {
 
             setMensaje('Expediente eliminado correctamente');
 
-            await cargarExpedientes();
+            await cargarExpedientes(textoBusqueda);
 
         } catch (error) {
             setMensaje(error.message);
@@ -156,10 +206,90 @@ function Expedientes() {
             tipoIncidente: '',
             zona: '',
             fecha: '',
-            descripcion: ''
+            descripcion: '',
+            estatus: '',
+            prioridad: ''
         });
 
         setEditando(false);
+    }
+
+    // Aplicar filtros
+    let expedientesMostrados = expedientes.filter((expediente) => {
+
+        const coincideEstatus =
+            filtroEstatus === '' ||
+            expediente.estatus === filtroEstatus;
+
+        const coincidePrioridad =
+            filtroPrioridad === '' ||
+            expediente.prioridad === filtroPrioridad;
+
+        return coincideEstatus && coincidePrioridad;
+    });
+
+    // Aplicar ordenamiento
+    if (columnaOrden !== '') {
+
+        expedientesMostrados = [...expedientesMostrados].sort((a, b) => {
+
+            let comparacion = 0;
+
+            if (columnaOrden === 'folio') {
+                comparacion = a.folio.localeCompare(b.folio);
+            }
+
+            if (columnaOrden === 'fechaCreacion') {
+                comparacion =
+                    new Date(a.fechaCreacion) -
+                    new Date(b.fechaCreacion);
+            }
+
+            if (columnaOrden === 'prioridad') {
+
+                const ordenPrioridad = {
+                    Alta: 1,
+                    Media: 2,
+                    Baja: 3
+                };
+
+                comparacion =
+                    ordenPrioridad[a.prioridad] -
+                    ordenPrioridad[b.prioridad];
+            }
+
+            return direccionOrden === 'asc'
+                ? comparacion
+                : -comparacion;
+        });
+    }
+
+    // Calcular la cantidad de páginas
+    const totalPaginas = Math.ceil(
+        expedientesMostrados.length / expedientesPorPagina
+    );
+
+    // Evitar páginas fuera del rango disponible
+    const paginaSegura = Math.min(
+        paginaActual,
+        Math.max(totalPaginas, 1)
+    );
+
+    // Obtener los expedientes de la página actual
+    const indiceInicial =
+        (paginaSegura - 1) * expedientesPorPagina;
+
+    const indiceFinal =
+        indiceInicial + expedientesPorPagina;
+
+    const expedientesPaginados =
+        expedientesMostrados.slice(indiceInicial, indiceFinal);
+
+    // Cambiar de página
+    function cambiarPagina(nuevaPagina) {
+        if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
+            setPaginaActual(nuevaPagina);
+        }
     }
 
     return (
@@ -231,6 +361,34 @@ function Expedientes() {
                     required
                 />
 
+                <label>Estatus:</label>
+
+                <select
+                    name="estatus"
+                    value={formulario.estatus}
+                    onChange={manejarCambio}
+                    required
+                >
+                    <option value="">Selecciona un estatus</option>
+                    <option value="Abierto">Abierto</option>
+                    <option value="En proceso">En proceso</option>
+                    <option value="Cerrado">Cerrado</option>
+                </select>
+
+                <label>Prioridad:</label>
+
+                <select
+                    name="prioridad"
+                    value={formulario.prioridad}
+                    onChange={manejarCambio}
+                    required
+                >
+                    <option value="">Selecciona una prioridad</option>
+                    <option value="Alta">Alta</option>
+                    <option value="Media">Media</option>
+                    <option value="Baja">Baja</option>
+                </select>
+
                 <label>Descripción:</label>
 
                 <textarea
@@ -261,6 +419,56 @@ function Expedientes() {
 
             <h2>Expedientes registrados</h2>
 
+            <div className="busqueda-expedientes">
+
+                <label htmlFor="buscarExpediente">
+                    Buscar expediente:
+                </label>
+
+                <input
+                    id="buscarExpediente"
+                    type="text"
+                    placeholder="Buscar por folio, operativo o descripción..."
+                    value={textoBusqueda}
+                    onChange={(e) => setTextoBusqueda(e.target.value)}
+                />
+
+            </div>
+
+            <div className="filtros-expedientes">
+
+                <label htmlFor="filtroEstatus">
+                    Filtrar por estatus:
+                </label>
+
+                <select
+                    id="filtroEstatus"
+                    value={filtroEstatus}
+                    onChange={(e) => setFiltroEstatus(e.target.value)}
+                >
+                    <option value="">Todos los estatus</option>
+                    <option value="Abierto">Abierto</option>
+                    <option value="En proceso">En proceso</option>
+                    <option value="Cerrado">Cerrado</option>
+                </select>
+
+                <label htmlFor="filtroPrioridad">
+                    Filtrar por prioridad:
+                </label>
+
+                <select
+                    id="filtroPrioridad"
+                    value={filtroPrioridad}
+                    onChange={(e) => setFiltroPrioridad(e.target.value)}
+                >
+                    <option value="">Todas las prioridades</option>
+                    <option value="Alta">Alta</option>
+                    <option value="Media">Media</option>
+                    <option value="Baja">Baja</option>
+                </select>
+
+            </div>
+
             {cargando && <p>Cargando expedientes...</p>}
 
             {error && <p>{error}</p>}
@@ -273,29 +481,65 @@ function Expedientes() {
 
                         <thead>
                             <tr>
-                                <th>Folio</th>
+
+                                <th>
+                                    <button
+                                        type="button"
+                                        onClick={() => manejarOrdenamiento('folio')}
+                                    >
+                                        Folio {columnaOrden === 'folio'
+                                            ? (direccionOrden === 'asc' ? '↑' : '↓')
+                                            : ''}
+                                    </button>
+                                </th>
+
                                 <th>Operativo</th>
                                 <th>Tipo de incidente</th>
                                 <th>Zona</th>
                                 <th>Fecha</th>
                                 <th>Descripción</th>
+                                <th>Estatus</th>
+
+                                <th>
+                                    <button
+                                        type="button"
+                                        onClick={() => manejarOrdenamiento('prioridad')}
+                                    >
+                                        Prioridad {columnaOrden === 'prioridad'
+                                            ? (direccionOrden === 'asc' ? '↑' : '↓')
+                                            : ''}
+                                    </button>
+                                </th>
+
+                                <th>
+                                    <button
+                                        type="button"
+                                        onClick={() => manejarOrdenamiento('fechaCreacion')}
+                                    >
+                                        Fecha de creación {columnaOrden === 'fechaCreacion'
+                                            ? (direccionOrden === 'asc' ? '↑' : '↓')
+                                            : ''}
+                                    </button>
+                                </th>
+
                                 <th>Acciones</th>
+
                             </tr>
                         </thead>
 
                         <tbody>
 
-                            {expedientes.length === 0 ? (
+                            {expedientesMostrados.length === 0 ? (
 
                                 <tr>
-                                    <td colSpan="7">
-                                        No hay expedientes registrados.
+                                    <td colSpan="10">
+                                        No hay expedientes que coincidan con los filtros.
                                     </td>
                                 </tr>
 
                             ) : (
 
-                                expedientes.map((expediente) => (
+                                expedientesPaginados.map((expediente) => (
 
                                     <tr key={expediente.folio}>
 
@@ -305,6 +549,18 @@ function Expedientes() {
                                         <td>{expediente.zona}</td>
                                         <td>{expediente.fecha}</td>
                                         <td>{expediente.descripcion}</td>
+
+                                        <td>
+                                            <span className={`estatus-badge ${expediente.estatus.toLowerCase().replace(' ', '-')}`}>
+                                                {expediente.estatus}
+                                            </span>
+                                        </td>
+
+                                        <td>{expediente.prioridad}</td>
+
+                                        <td>
+                                            {new Date(expediente.fechaCreacion).toLocaleDateString('es-MX')}
+                                        </td>
 
                                         <td>
                                             <button
@@ -331,6 +587,38 @@ function Expedientes() {
                         </tbody>
 
                     </table>
+
+                    {expedientesMostrados.length > 0 && (
+
+                        <div className="paginacion-expedientes">
+
+                            <button
+                                type="button"
+                                onClick={() => cambiarPagina(paginaSegura - 1)}
+                                disabled={paginaSegura === 1}
+                            >
+                                Anterior
+                            </button>
+
+                            <span>
+                                Página {paginaSegura} de {totalPaginas}
+                            </span>
+
+                            <button
+                                type="button"
+                                onClick={() => cambiarPagina(paginaSegura + 1)}
+                                disabled={paginaSegura === totalPaginas}
+                            >
+                                Siguiente
+                            </button>
+
+                        </div>
+
+                    )}
+
+                    <p className="total-expedientes">
+                        Mostrando {expedientesPaginados.length} de {expedientesMostrados.length} expedientes.
+                    </p>
 
                 </div>
 

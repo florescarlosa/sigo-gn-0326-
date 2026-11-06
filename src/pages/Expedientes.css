@@ -54,8 +54,10 @@
     align-self: end;
 }
 
+/* CAMPOS DE TEXTO, SELECTORES Y DESCRIPCIÓN */
 .expedientes-container input,
-.expedientes-container textarea {
+.expedientes-container textarea,
+.expedientes-container select {
     width: 100%;
     padding: 12px 14px;
     border: 1px solid #ccd9d0;
@@ -69,8 +71,10 @@
     transition: border 0.2s, box-shadow 0.2s;
 }
 
+/* EFECTO AL SELECCIONAR UN CAMPO */
 .expedientes-container input:focus,
-.expedientes-container textarea:focus {
+.expedientes-container textarea:focus,
+.expedientes-container select:focus {
     border-color: #23845d;
     box-shadow: 0 0 0 3px rgba(35, 132, 93, 0.12);
 }
@@ -139,6 +143,48 @@
     color: #176443;
     border-left: 4px solid #23845d;
     border-radius: 6px;
+}
+
+/* BÚSQUEDA DE EXPEDIENTES */
+.busqueda-expedientes {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    max-width: 600px;
+    margin-bottom: 20px;
+}
+
+.busqueda-expedientes label {
+    align-self: auto;
+}
+
+.busqueda-expedientes input {
+    width: 100%;
+}
+
+/* COLORES DE ESTATUS */
+.estatus-badge {
+    display: inline-block;
+    padding: 6px 11px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.estatus-badge.abierto {
+    background: #fce4e4;
+    color: #b52d2d;
+}
+
+.estatus-badge.en-proceso {
+    background: #fff1c9;
+    color: #8a6500;
+}
+
+.estatus-badge.cerrado {
+    background: #dff3e5;
+    color: #176443;
 }
 
 /* TABLA DE EXPEDIENTES */
