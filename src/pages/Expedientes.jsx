@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import './Expedientes.css';
+import { tienePermiso } from '../utils/permisos';
 
 function Expedientes() {
+    const usuarioActual = JSON.parse(localStorage.getItem('sigoUsuario') || 'null');
+    const rolUsuario = usuarioActual?.rol || '';
+    const puedeEscribir = tienePermiso(rolUsuario, 2);
+    const puedeEliminar = tienePermiso(rolUsuario, 1);
     const [expedientes, setExpedientes] = useState([]);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState('');
@@ -139,7 +144,8 @@ function Expedientes() {
             const respuesta = await fetch(url, {
                 method: editando ? 'PUT' : 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'x-rol': rolUsuario
                 },
                 body: JSON.stringify(formulario)
             });
@@ -179,7 +185,10 @@ function Expedientes() {
             const respuesta = await fetch(
                 `http://localhost:4000/expedientes/${folio}`,
                 {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: {
+                        'x-rol': rolUsuario
+                    }
                 }
             );
 
@@ -299,6 +308,8 @@ function Expedientes() {
 
             <p>Gestión de expedientes de operativos SIGO-GN</p>
 
+            {puedeEscribir && (
+            <>
             <h2>
                 {editando
                     ? 'Editar expediente'
@@ -414,6 +425,8 @@ function Expedientes() {
                 )}
 
             </form>
+            </>
+            )}
 
             {mensaje && <p>{mensaje}</p>}
 
@@ -522,7 +535,7 @@ function Expedientes() {
                                     </button>
                                 </th>
 
-                                <th>Acciones</th>
+                                {(puedeEscribir || puedeEliminar) && <th>Acciones</th>}
 
                             </tr>
                         </thead>
@@ -532,7 +545,7 @@ function Expedientes() {
                             {expedientesMostrados.length === 0 ? (
 
                                 <tr>
-                                    <td colSpan="10">
+                                    <td colSpan={puedeEscribir || puedeEliminar ? 10 : 9}>
                                         No hay expedientes que coincidan con los filtros.
                                     </td>
                                 </tr>
@@ -562,21 +575,27 @@ function Expedientes() {
                                             {new Date(expediente.fechaCreacion).toLocaleDateString('es-MX')}
                                         </td>
 
-                                        <td>
-                                            <button
-                                                type="button"
-                                                onClick={() => editarExpediente(expediente)}
-                                            >
-                                                Editar
-                                            </button>
+                                        {(puedeEscribir || puedeEliminar) && (
+                                            <td>
+                                                {puedeEscribir && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => editarExpediente(expediente)}
+                                                    >
+                                                        Editar
+                                                    </button>
+                                                )}
 
-                                            <button
-                                                type="button"
-                                                onClick={() => eliminarExpediente(expediente.folio)}
-                                            >
-                                                Eliminar
-                                            </button>
-                                        </td>
+                                                {puedeEliminar && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => eliminarExpediente(expediente.folio)}
+                                                    >
+                                                        Eliminar
+                                                    </button>
+                                                )}
+                                            </td>
+                                        )}
 
                                     </tr>
 
