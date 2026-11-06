@@ -3,7 +3,7 @@ const usuarios = [
     usuario: "admin",
     contrasena: "HDFLLRA2",
     nombre: "Administrador",
-    rol: "Oficial",
+    rol: "Comandante",
   },
   {
     usuario: "operador1",
@@ -15,7 +15,7 @@ const usuarios = [
     usuario: "operador2",
     contrasena: "Romi0709",
     nombre: "Romina Rico",
-    rol: "Oficial",
+    rol: "Analista",
   },
   {
     usuario: "operador3",
